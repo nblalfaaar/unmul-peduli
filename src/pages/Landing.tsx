@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
+import { listPengajuanPublik, listPenawaran } from "../lib/api";
+import type { Pengajuan, Penawaran } from "../lib/firebase";
 
 const Icon = ({ name, size = 20 }: { name: string; size?: number }) => {
   const paths: Record<string, React.ReactNode> = {
@@ -54,17 +56,6 @@ const Icon = ({ name, size = 20 }: { name: string; size?: number }) => {
         <path d="M8 7V5h8v2M3 12h18M10 12v2h4v-2" />
       </>
     ),
-    search: (
-      <>
-        <circle cx="11" cy="11" r="7" />
-        <path d="m20 20-4-4" />
-      </>
-    ),
-    close: (
-      <>
-        <path d="m6 6 12 12M18 6 6 18" />
-      </>
-    ),
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -73,59 +64,24 @@ const Icon = ({ name, size = 20 }: { name: string; size?: number }) => {
   );
 };
 
-const requests = [
-  {
-    category: "Pendidikan",
-    icon: "book",
-    title: "Buku Referensi Teknik Sipil",
-    desc: "Membutuhkan buku Mekanika Tanah untuk persiapan ujian semester.",
-    name: "Raka",
-    faculty: "Fakultas Teknik",
-    progress: 72,
-    unit: "9 dari 12 buku",
-    urgent: true,
-    color: "mint",
-  },
-  {
-    category: "Kebutuhan",
-    icon: "food",
-    title: "Paket Makan Minggu Tenang",
-    desc: "Bantu teman-teman perantau melewati minggu ujian dengan tenang.",
-    name: "BEM KM",
-    faculty: "Lintas Fakultas",
-    progress: 48,
-    unit: "48 dari 100 paket",
-    urgent: false,
-    color: "peach",
-  },
-  {
-    category: "Kesehatan",
-    icon: "health",
-    title: "Donor Darah untuk Ayah Dita",
-    desc: "Dibutuhkan donor darah O+ di RS Abdul Wahab Sjahranie.",
-    name: "Dita",
-    faculty: "FISIP",
-    progress: 75,
-    unit: "3 dari 4 pendonor",
-    urgent: true,
-    color: "rose",
-  },
-];
-
-const offers = [
-  { icon: "book", title: "Mentoring Kalkulus", by: "Nadya • FMIPA", time: "Sabtu, 10.00 WITA", spots: "3 kursi tersisa" },
-  { icon: "briefcase", title: "Review CV & Portofolio", by: "Kak Arman • Alumni", time: "Jumat, 19.30 WITA", spots: "5 kursi tersisa" },
-  { icon: "food", title: "Nasi Gratis Jumat", by: "Komunitas Berbagi", time: "Jumat, 11.00 WITA", spots: "20 porsi tersedia" },
-];
-
 export default function Landing() {
   const nav = useNavigate();
   const { user } = useAuth();
   const [filter, setFilter] = useState("Semua");
-  const [liked, setLiked] = useState<number[]>([]);
-  const [modal, setModal] = useState<"request" | "offer" | "help" | null>(null);
-  const filtered = filter === "Semua" ? requests : requests.filter((r) => r.category === filter);
+  const [requests, setRequests] = useState<Pengajuan[]>([]);
+  const [offers, setOffers] = useState<Penawaran[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
 
+  useEffect(() => {
+    Promise.all([listPengajuanPublik(), listPenawaran()])
+      .then(([req, off]) => {
+        setRequests(req.slice(0, 6));
+        setOffers(off.filter((o) => o.status === "Tersedia").slice(0, 3));
+      })
+      .finally(() => setLoadingData(false));
+  }, []);
+
+  const filtered = filter === "Semua" ? requests : requests.filter((r) => r.kategori === filter);
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 
   return (
@@ -141,15 +97,9 @@ export default function Landing() {
           </span>
         </button>
         <nav className="nav-links">
-          <Link to="/bantuan">
-            <button>Tentang</button>
-          </Link>
-          <Link to="/bantuan">
-            <button>Butuh bantuan</button>
-          </Link>
-          <Link to="/tawarkan">
-            <button>Tawarkan bantuan</button>
-          </Link>
+          <button onClick={() => scrollTo("about")}>Tentang</button>
+          <button onClick={() => scrollTo("needs")}>Butuh bantuan</button>
+          <button onClick={() => scrollTo("offers")}>Tawarkan bantuan</button>
         </nav>
         <button className="pill pill-dark" onClick={() => nav(user ? "/ajukan" : "/login")}>
           Mulai berbagi <Icon name="arrow" size={17} />
@@ -255,59 +205,63 @@ export default function Landing() {
             <p>Temukan kebutuhan yang paling dekat denganmu. Sekecil apa pun bantuanmu, selalu punya arti.</p>
           </div>
           <div className="filter-row">
-            {["Semua", "Pendidikan", "Kebutuhan", "Kesehatan"].map((item) => (
+            {["Semua", "Pendidikan", "Kebutuhan", "Kesehatan", "Lainnya"].map((item) => (
               <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>
                 {item}
               </button>
             ))}
           </div>
           <div className="cards-grid">
-            {filtered.map((item, index) => (
-              <article className="need-card" key={item.title}>
-                <div className={`card-top ${item.color}`}>
-                  <span className="category-icon">
-                    <Icon name={item.icon} size={30} />
+            {loadingData && <p style={{ padding: 40, textAlign: "center", opacity: 0.5, gridColumn: "1/-1" }}>Memuat data bantuan…</p>}
+            {!loadingData && filtered.length === 0 && (
+              <div style={{ gridColumn: "1/-1", padding: 40, textAlign: "center", background: "var(--cream)", borderRadius: 20 }}>
+                <p style={{ fontSize: 40, marginBottom: 10 }}>🌱</p>
+                <p style={{ opacity: 0.6, marginBottom: 16 }}>Belum ada bantuan terverifikasi.</p>
+                <Link to="/ajukan">
+                  <button className="pill pill-orange">Jadi yang pertama mengajukan</button>
+                </Link>
+              </div>
+            )}
+            {filtered.map((item) => (
+              <article className="need-card" key={item.id}>
+                <div className={`card-top ${item.urgensi === "tinggi" ? "rose" : item.kategori === "Kesehatan" ? "peach" : "mint"}`}>
+                  <span className="category-icon" style={{ fontSize: 30 }}>
+                    {item.kategori === "Pendidikan" ? "📚" : item.kategori === "Kesehatan" ? "❤️" : item.kategori === "Kebutuhan" ? "🍱" : "🎁"}
                   </span>
-                  <button className={`like ${liked.includes(index) ? "liked" : ""}`} onClick={() => setLiked(liked.includes(index) ? liked.filter((i) => i !== index) : [...liked, index])} aria-label="Simpan bantuan">
-                    <Icon name="heart" size={19} />
-                  </button>
-                  {item.urgent && (
+                  {item.urgensi === "tinggi" && (
                     <span className="urgent">
                       <span /> Mendesak
                     </span>
                   )}
                 </div>
                 <div className="card-body">
-                  <span className="label">{item.category}</span>
-                  <h3>{item.title}</h3>
-                  <p>{item.desc}</p>
+                  <span className="label">{item.kategori}</span>
+                  <h3>{item.judul}</h3>
+                  <p>{item.deskripsi}</p>
                   <div className="requester">
-                    <span>{item.name.slice(0, 2).toUpperCase()}</span>
+                    <span>{item.pengaju_nama.slice(0, 2).toUpperCase()}</span>
                     <div>
-                      <b>{item.name}</b>
-                      <small>{item.faculty}</small>
+                      <b>{item.pengaju_nama}</b>
+                      <small>{item.pengaju_fakultas || "Universitas Mulawarman"}</small>
                     </div>
                     <i>
                       <Icon name="shield" size={15} />
                     </i>
                   </div>
-                  <div className="progress-meta">
-                    <b>{item.progress}% terpenuhi</b>
-                    <span>{item.unit}</span>
-                  </div>
-                  <div className="progress">
-                    <span style={{ width: `${item.progress}%` }} />
-                  </div>
-                  <button className="help-btn" onClick={() => setModal("help")}>
-                    Bantu sekarang <Icon name="arrow" size={17} />
-                  </button>
+                  <Link to={`/bantuan/${item.id}`}>
+                    <button className="help-btn">
+                      Bantu sekarang <Icon name="arrow" size={17} />
+                    </button>
+                  </Link>
                 </div>
               </article>
             ))}
           </div>
-          <button className="outline-btn" onClick={() => setFilter("Semua")}>
-            Lihat semua permintaan <Icon name="arrow" size={17} />
-          </button>
+          <Link to="/bantuan" style={{ display: "block", textAlign: "center", marginTop: 30 }}>
+            <button className="outline-btn">
+              Lihat semua permintaan <Icon name="arrow" size={17} />
+            </button>
+          </Link>
         </section>
 
         <section className="impact-band">
@@ -346,25 +300,36 @@ export default function Landing() {
             </button>
           </div>
           <div className="offer-list">
+            {loadingData && <p style={{ padding: 20, opacity: 0.5 }}>Memuat…</p>}
+            {!loadingData && offers.length === 0 && (
+              <div style={{ padding: 30, textAlign: "center", background: "var(--cream)", borderRadius: 16 }}>
+                <p style={{ opacity: 0.6 }}>Belum ada penawaran.</p>
+                <Link to="/tawarkan" style={{ color: "var(--orange)", fontWeight: 700, display: "inline-block", marginTop: 10 }}>
+                  Tawarkan bantuan pertama →
+                </Link>
+              </div>
+            )}
             {offers.map((offer) => (
-              <article key={offer.title}>
-                <span className="offer-icon">
-                  <Icon name={offer.icon} size={25} />
-                </span>
-                <div>
-                  <h3>{offer.title}</h3>
-                  <p>{offer.by}</p>
-                  <small>
-                    <Icon name="clock" size={14} /> {offer.time}
-                  </small>
-                </div>
-                <div className="offer-end">
-                  <span>{offer.spots}</span>
-                  <button onClick={() => setModal("help")} aria-label="Lihat penawaran">
-                    <Icon name="arrow" />
-                  </button>
-                </div>
-              </article>
+              <Link to={`/penawaran/${offer.id}`} key={offer.id} style={{ textDecoration: "none", color: "inherit" }}>
+                <article style={{ cursor: "pointer" }}>
+                  <span className="offer-icon" style={{ fontSize: 22 }}>
+                    🎁
+                  </span>
+                  <div>
+                    <h3>{offer.judul}</h3>
+                    <p>{offer.pemberi_nama}</p>
+                    <small>
+                      <Icon name="clock" size={14} /> {offer.kategori}
+                    </small>
+                  </div>
+                  <div className="offer-end">
+                    <span>{offer.status === "Tersedia" ? "Tersedia" : "Terpakai"}</span>
+                    <button aria-label="Lihat penawaran">
+                      <Icon name="arrow" />
+                    </button>
+                  </div>
+                </article>
+              </Link>
             ))}
           </div>
         </section>
@@ -404,46 +369,17 @@ export default function Landing() {
         </div>
         <p>© 2025 Unmul Peduli. Tumbuh bersama dalam kebaikan.</p>
         <div>
-          <button onClick={() => scrollTo("about")}>Tentang</button>
-          <button onClick={() => scrollTo("needs")}>Jelajahi</button>
-          <button onClick={() => setModal("help")}>Bantuan</button>
+          <Link to="/bantuan">
+            <button>Tentang</button>
+          </Link>
+          <Link to="/bantuan">
+            <button>Jelajahi</button>
+          </Link>
+          <Link to="/penawaran">
+            <button>Penawaran</button>
+          </Link>
         </div>
       </footer>
-
-      {modal && (
-        <div className="modal-backdrop" onMouseDown={() => setModal(null)}>
-          <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setModal(null)} aria-label="Tutup">
-              <Icon name="close" />
-            </button>
-            <span className="modal-icon">
-              <Icon name={modal === "request" ? "users" : "heart"} size={30} />
-            </span>
-            <span className="kicker">{modal === "request" ? "KAMU TIDAK SENDIRI" : "TERIMA KASIH SUDAH PEDULI"}</span>
-            <h2>{modal === "request" ? "Ceritakan kebutuhanmu." : modal === "offer" ? "Apa yang ingin kamu bagikan?" : "Pilih cara kamu membantu."}</h2>
-            <p>Tim Unmul Peduli akan menghubungimu dan mendampingi proses berikutnya dengan aman.</p>
-            <label>
-              Nama lengkap
-              <input placeholder="Masukkan nama kamu" />
-            </label>
-            <label>
-              {modal === "request" ? "Jenis kebutuhan" : "Bentuk bantuan"}
-              <select defaultValue="">
-                <option value="" disabled>
-                  Pilih kategori
-                </option>
-                <option>Pendidikan</option>
-                <option>Kebutuhan harian</option>
-                <option>Kesehatan</option>
-                <option>Waktu & keahlian</option>
-              </select>
-            </label>
-            <button className="pill pill-orange full" onClick={() => setModal(null)}>
-              Lanjutkan <Icon name="arrow" size={17} />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

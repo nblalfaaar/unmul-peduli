@@ -22,7 +22,7 @@ export default function DaftarBantuan() {
     <div className="site-shell">
       <Nav />
       <main style={{ padding: "60px 6.5%", minHeight: "70vh" }}>
-        <h1 style={{ fontSize: 48, fontWeight: 800, marginBottom: 10 }}>Daftar Bantuan</h1>
+        <h1 style={{ fontSize: 48, fontWeight: 800, marginBottom: 10 }}>Pengajuan Bantuan</h1>
         <p style={{ opacity: 0.65, marginBottom: 30 }}>Bantuan yang sudah terverifikasi & siap dibantu.</p>
 
         <div className="filter-row">
@@ -35,13 +35,13 @@ export default function DaftarBantuan() {
 
         {loading && <p>Memuat…</p>}
         {!loading && filtered.length === 0 && (
-          <p style={{ opacity: 0.5, padding: 40, textAlign: "center" }}>
-            Belum ada bantuan terverifikasi.{" "}
-            <Link to="/ajukan" style={{ color: "var(--orange)" }}>
-              Ajukan sekarang
+          <div style={{ padding: 60, textAlign: "center", background: "var(--cream)", borderRadius: 20 }}>
+            <p style={{ fontSize: 48, marginBottom: 10 }}>🤝</p>
+            <p style={{ opacity: 0.6, marginBottom: 20 }}>Belum ada bantuan terverifikasi.</p>
+            <Link to="/ajukan">
+              <button className="pill pill-orange">Ajukan sekarang</button>
             </Link>
-            .
-          </p>
+          </div>
         )}
 
         <div className="cards-grid">
@@ -68,18 +68,14 @@ export default function DaftarBantuan() {
                     <small>{p.pengaju_fakultas || "Universitas Mulawarman"}</small>
                   </div>
                 </div>
-                <div style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>
-                  Status: <b>{p.status}</b>
-                </div>
+                <Link to={`/bantuan/${p.id}`}>
+                  <button className="help-btn">
+                    Bantu sekarang <span style={{ marginLeft: 6 }}>→</span>
+                  </button>
+                </Link>
               </div>
             </article>
           ))}
-        </div>
-
-        <div style={{ textAlign: "center", marginTop: 50 }}>
-          <Link to="/ajukan">
-            <button className="pill pill-orange">Ajukan bantuan baru</button>
-          </Link>
         </div>
       </main>
     </div>
