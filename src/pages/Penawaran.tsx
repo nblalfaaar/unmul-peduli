@@ -1,78 +1,71 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Nav } from "../components/Nav";
-import { listPenawaran } from "../lib/api";
-import type { Penawaran as PenawaranType } from "../lib/firebase";
+import { useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Gift, Plus, Search, SearchX } from 'lucide-react'
+import { listPenawaran } from '../lib/api'
+import { useData, useTitle } from '../lib/hooks'
+import { KATEGORI } from '../lib/constants'
+import type { Penawaran as P } from '../lib/firebase'
+import { PageTop } from '../components/PageTop'
+import { OfferCard } from '../components/Cards'
+import { CardSkeletons, EmptyState, stagger } from '../components/ui'
 
 export default function Penawaran() {
-  const [list, setList] = useState<PenawaranType[]>([]);
-  const [filter, setFilter] = useState("Semua");
-  const [loading, setLoading] = useState(true);
+  useTitle('Penawaran Bantuan')
+  const [sp, setSp] = useSearchParams()
+  const q = sp.get('q') ?? ''
+  const kategori = sp.get('kategori') ?? 'Semua'
+  const status = sp.get('status') ?? 'tersedia'
+  const { data, loading, error } = useData(listPenawaran, [], [] as P[])
 
-  useEffect(() => {
-    listPenawaran().then((d) => {
-      setList(d.filter((p) => p.status === "Tersedia"));
-      setLoading(false);
-    });
-  }, []);
+  function set(k: string, v: string, def = '') {
+    const n = new URLSearchParams(sp)
+    if (!v || v === def) n.delete(k)
+    else n.set(k, v)
+    setSp(n, { replace: true })
+  }
 
-  const filtered = filter === "Semua" ? list : list.filter((p) => p.kategori === filter);
+  const hasil = useMemo(() => {
+    const kw = q.trim().toLowerCase()
+    return data
+      .filter((p) => status === 'semua' || p.status === 'Tersedia')
+      .filter((p) => kategori === 'Semua' || p.kategori === kategori)
+      .filter((p) => !kw || `${p.judul} ${p.deskripsi} ${p.pemberi_nama} ${p.kategori}`.toLowerCase().includes(kw))
+  }, [data, q, kategori, status])
 
   return (
-    <div className="site-shell">
-      <Nav />
-      <main style={{ padding: "60px 6.5%", minHeight: "70vh" }}>
-        <h1 style={{ fontSize: 48, fontWeight: 800, marginBottom: 10 }}>Penawaran Bantuan</h1>
-        <p style={{ opacity: 0.65, marginBottom: 30 }}>Bantuan yang ditawarkan mahasiswa. Siapa cepat, dia dapat!</p>
-
-        <div className="filter-row">
-          {["Semua", "Pendidikan", "Kebutuhan", "Kesehatan", "Lainnya"].map((c) => (
-            <button key={c} className={filter === c ? "active" : ""} onClick={() => setFilter(c)}>
-              {c}
-            </button>
-          ))}
-        </div>
-
-        {loading && <p>Memuat…</p>}
-        {!loading && filtered.length === 0 && (
-          <div style={{ padding: 60, textAlign: "center", background: "var(--cream)", borderRadius: 20 }}>
-            <p style={{ fontSize: 48, marginBottom: 10 }}>🎁</p>
-            <p style={{ opacity: 0.6, marginBottom: 20 }}>Belum ada penawaran tersedia.</p>
-            <Link to="/tawarkan">
-              <button className="pill pill-dark">Jadi yang pertama menawarkan</button>
-            </Link>
+    <>
+      <PageTop title="Penawaran Bantuan" desc="Bantuan yang ditawarkan sivitas akademika. Klaim yang kamu butuhkan, siapa cepat dia dapat." actions={<Link to="/tawarkan" className="btn btn-light"><Plus size={16} /> Tawarkan bantuan</Link>} />
+      <div className="container page-body">
+        <div className="toolbar" role="search">
+          <div className="input-icon">
+            <Search size={17} className="lead" />
+            <input className="input" placeholder="Cari penawaran..." value={q} onChange={(e) => set('q', e.target.value)} aria-label="Cari penawaran" />
           </div>
-        )}
-
-        <div className="cards-grid">
-          {filtered.map((p) => (
-            <article key={p.id} className="need-card">
-              <div className="card-top peach">
-                <span className="category-icon" style={{ fontSize: 30 }}>
-                  🎁
-                </span>
-              </div>
-              <div className="card-body">
-                <span className="label">{p.kategori}</span>
-                <h3>{p.judul}</h3>
-                <p>{p.deskripsi}</p>
-                <div className="requester">
-                  <span>{p.pemberi_nama.slice(0, 2).toUpperCase()}</span>
-                  <div>
-                    <b>{p.pemberi_nama}</b>
-                    <small>Pemberi bantuan</small>
-                  </div>
-                </div>
-                <Link to={`/penawaran/${p.id}`}>
-                  <button className="help-btn">
-                    Lihat detail <span style={{ marginLeft: 6 }}>→</span>
-                  </button>
-                </Link>
-              </div>
-            </article>
+          <select className="select" value={status} onChange={(e) => set('status', e.target.value, 'tersedia')} aria-label="Filter status">
+            <option value="tersedia">Masih tersedia</option>
+            <option value="semua">Semua status</option>
+          </select>
+        </div>
+        <div className="filter-row">
+          {['Semua', ...KATEGORI].map((c) => (
+            <button key={c} className={`pill-filter ${kategori === c ? 'on' : ''}`} onClick={() => set('kategori', c, 'Semua')}>{c}</button>
           ))}
         </div>
-      </main>
-    </div>
-  );
+        {!loading && !error && <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>{hasil.length} penawaran ditemukan</p>}
+        {error && <div className="alert alert-danger" style={{ marginBottom: 16 }}>{error}</div>}
+        {loading ? <CardSkeletons /> : hasil.length === 0 ? (
+          (q || kategori !== 'Semua') ? (
+            <EmptyState icon={SearchX} title="Tidak ada hasil yang cocok" desc="Coba ubah kata kunci atau kategori." action={<button className="btn btn-primary" onClick={() => setSp({}, { replace: true })}>Reset filter</button>} />
+          ) : (
+            <EmptyState icon={Gift} title="Belum ada penawaran tersedia" desc="Punya sesuatu yang bisa dibagi? Jadilah yang pertama menawarkan." action={<Link to="/tawarkan" className="btn btn-primary">Tawarkan bantuan</Link>} />
+          )
+        ) : (
+          <motion.div className="cards-grid" variants={stagger} initial="hidden" animate="show" key={`${kategori}${status}${q}`}>
+            {hasil.map((p) => <OfferCard key={p.id} p={p} />)}
+          </motion.div>
+        )}
+      </div>
+    </>
+  )
 }

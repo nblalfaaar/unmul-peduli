@@ -1,68 +1,60 @@
-import { useEffect, useState } from "react";
-import { Nav } from "../components/Nav";
-import { useAuth } from "../lib/auth";
-import { listNotifikasi, tandaiNotifDibaca } from "../lib/api";
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Bell, BellOff, CheckCheck } from 'lucide-react'
+import { tandaiNotifDibaca, tandaiSemuaNotifDibaca } from '../lib/api'
+import { useTitle } from '../lib/hooks'
+import { tgl, waktuRelatif } from '../lib/format'
+import type { Notifikasi as N } from '../lib/firebase'
+import { useNotifikasi } from '../components/Chrome'
+import { useFeedback } from '../components/Feedback'
+import { EmptyState, PageHeader, riseItem, stagger } from '../components/ui'
 
 export default function Notifikasi() {
-  const { user } = useAuth();
-  const [list, setList] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  useTitle('Notifikasi')
+  const nav = useNavigate()
+  const { toast } = useFeedback()
+  const { list, unread } = useNotifikasi()
+  const [hanyaBaru, setHanyaBaru] = useState(false)
+  const tampil = hanyaBaru ? list.filter((n) => !n.status_baca) : list
 
-  async function load() {
-    if (!user) return;
-    setLoading(true);
-    const data = await listNotifikasi(user.id);
-    setList(data);
-    setLoading(false);
+  async function buka(n: N) {
+    if (!n.status_baca) tandaiNotifDibaca(n.id).catch(() => {})
+    if (n.link) nav(n.link)
   }
 
-  useEffect(() => {
-    load();
-  }, [user]);
-
-  async function handleRead(id: string) {
-    await tandaiNotifDibaca(id);
-    load();
+  async function semua() {
+    try {
+      await tandaiSemuaNotifDibaca(list.filter((n) => !n.status_baca).map((n) => n.id))
+      toast('ok', 'Semua notifikasi ditandai dibaca')
+    } catch {
+      toast('err', 'Gagal menandai notifikasi')
+    }
   }
 
   return (
-    <div className="site-shell">
-      <Nav />
-      <div style={{ padding: "60px 6.5%", minHeight: "80vh", maxWidth: 800, margin: "0 auto" }}>
-        <h1 style={{ fontSize: 40, fontWeight: 800, marginBottom: 8 }}>Notifikasi</h1>
-        <p style={{ opacity: 0.65, marginBottom: 30 }}>Aktivitas terbaru terkait bantuanmu.</p>
-
-        {loading && <p>Memuat…</p>}
-        {!loading && list.length === 0 && (
-          <div style={{ padding: 60, textAlign: "center", background: "var(--cream)", borderRadius: 20 }}>
-            <p style={{ fontSize: 48, marginBottom: 10 }}>🔔</p>
-            <p style={{ opacity: 0.6 }}>Belum ada notifikasi.</p>
-          </div>
-        )}
-
-        <div style={{ display: "grid", gap: 10 }}>
-          {list.map((n) => (
-            <div
-              key={n.id}
-              onClick={() => !n.status_baca && handleRead(n.id)}
-              style={{
-                background: n.status_baca ? "#fafafa" : "white",
-                border: n.status_baca ? "1px solid #eee" : "2px solid var(--orange)",
-                padding: 18,
-                borderRadius: 14,
-                cursor: n.status_baca ? "default" : "pointer",
-                transition: "all .2s",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
-                <p style={{ fontSize: 14, lineHeight: 1.6 }}>{n.pesan}</p>
-                {!n.status_baca && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--orange)", flexShrink: 0, marginTop: 8 }} />}
-              </div>
-              <div style={{ fontSize: 11, opacity: 0.5, marginTop: 8 }}>{new Date(n.created_at).toLocaleString("id-ID")}</div>
-            </div>
-          ))}
-        </div>
+    <>
+      <PageHeader title="Notifikasi" sub={unread > 0 ? `${unread} notifikasi belum dibaca` : 'Semua notifikasi sudah dibaca'} actions={unread > 0 && <button className="btn btn-soft btn-sm" onClick={semua}><CheckCheck size={15} /> Tandai semua dibaca</button>} />
+      <div className="tabs">
+        <button className={`tab ${!hanyaBaru ? 'on' : ''}`} onClick={() => setHanyaBaru(false)}>Semua<span className="n">{list.length}</span></button>
+        <button className={`tab ${hanyaBaru ? 'on' : ''}`} onClick={() => setHanyaBaru(true)}>Belum dibaca<span className="n">{unread}</span></button>
       </div>
-    </div>
-  );
+      {tampil.length === 0 ? (
+        <EmptyState icon={BellOff} title={hanyaBaru ? 'Tidak ada notifikasi baru' : 'Belum ada notifikasi'} desc="Pembaruan status pengajuan dan penawaranmu akan muncul di sini." />
+      ) : (
+        <motion.div className="stack" style={{ gap: 10 }} variants={stagger} initial="hidden" animate="show" key={String(hanyaBaru)}>
+          {tampil.map((n) => (
+            <motion.button key={n.id} variants={riseItem} className={`notif-item ${n.status_baca ? '' : 'unread'}`} onClick={() => buka(n)}>
+              <span className="ic"><Bell size={18} /></span>
+              <div style={{ flex: 1 }}>
+                <p>{n.pesan}</p>
+                <small title={tgl(n.created_at, true)}>{waktuRelatif(n.created_at)}</small>
+              </div>
+              {!n.status_baca && <span className="dot" style={{ color: 'var(--c-peach-strong)', marginTop: 8 }} />}
+            </motion.button>
+          ))}
+        </motion.div>
+      )}
+    </>
+  )
 }

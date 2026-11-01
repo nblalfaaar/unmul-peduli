@@ -1,11 +1,21 @@
-import { Navigate } from 'react-router-dom'
+import type { ReactNode } from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import type { Role } from '../lib/firebase'
 
-export function ProtectedRoute({ children, role }: { children: React.ReactNode; role?: Role }) {
+export function PageLoader() {
+  return (
+    <div className="page-loader" role="status" aria-label="Memuat">
+      <img src="/logo-unmul.png" alt="UNMUL Peduli" className="pulse-logo" width="72" height="72" />
+    </div>
+  )
+}
+
+export function ProtectedRoute({ children, roles }: { children: ReactNode; roles?: Role[] }) {
   const { user, loading } = useAuth()
-  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Memuat…</div>
-  if (!user) return <Navigate to="/login" replace />
-  if (role && user.role !== role) return <Navigate to="/" replace />
+  const loc = useLocation()
+  if (loading) return <PageLoader />
+  if (!user) return <Navigate to="/login" replace state={{ from: loc.pathname + loc.search }} />
+  if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }

@@ -1,75 +1,32 @@
-# React + TypeScript + Vite
+# UNMUL Peduli
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Platform web penghubung pemberi dan penerima bantuan di Universitas Mulawarman.
+Stack: React 19, Vite, TypeScript, React Router, Firebase (Auth + Firestore), Framer Motion, Lucide Icons. Font: Poppins.
 
-Currently, two official plugins are available:
+## Menjalankan
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
+cp .env.example .env.local   # isi konfigurasi Firebase
+npm run dev
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## Setup Firebase (gratis, paket Spark)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. Authentication > Sign-in method > aktifkan **Email/Password**.
+2. Firestore Database > buat database.
+3. Firestore > **Rules** > tempel isi `firestore.rules`, lalu Publish.
+4. Buat akun admin pertama: daftar lewat aplikasi, lalu di Firestore ubah field `role` dokumen `users/{uid}` menjadi `admin`. Setelahnya admin dapat mengatur peran lain dari menu Manajemen User.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Tidak memakai Firebase Storage (tidak ada fitur unggah berkas).
 
-```
+## Alur sesuai laporan
+
+Pengajuan > Verifikasi > Pencocokan > Penyaluran > Selesai. Semua perubahan status memakai transaksi Firestore, dicatat di `riwayat_status`, dan memicu notifikasi realtime.
+
+| Peran | Akses |
+| --- | --- |
+| Mahasiswa | Ajukan, tawarkan, bantu, klaim, pantau status |
+| Verifikator | Setujui / tolak pengajuan (alasan wajib saat menolak) |
+| Admin | Semua akses verifikator, panel statistik, rekap CSV, manajemen user |

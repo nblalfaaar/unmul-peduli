@@ -1,16 +1,25 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import { AuthProvider } from "./lib/auth";
-import App from "./App";
-import "./index.css";
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import { MotionConfig } from 'framer-motion'
+import { AuthProvider } from './lib/auth'
+import { ThemeProvider } from './lib/theme'
+import { FeedbackProvider } from './components/Feedback'
+import App from './App'
+import './index.css'
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <MotionConfig reducedMotion="user">
+        <ThemeProvider>
+          <FeedbackProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </FeedbackProvider>
+        </ThemeProvider>
+      </MotionConfig>
     </BrowserRouter>
-  </React.StrictMode>,
-);
+  </StrictMode>,
+)
