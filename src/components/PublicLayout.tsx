@@ -16,6 +16,7 @@ export function PublicNavbar() {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const { pathname } = useLocation()
+  const light = pathname === '/'
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 12)
@@ -26,8 +27,8 @@ export function PublicNavbar() {
   useEffect(() => setOpen(false), [pathname])
 
   return (
-    <div className="nav-wrap">
-      <motion.nav className={`nav-pill ${scrolled ? 'scrolled' : ''}`} aria-label="Navigasi utama" initial={{ y: -80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 24 }}>
+    <div className={`nav-wrap ${light ? 'light' : ''}`}>
+      <motion.nav className={`nav-pill ${scrolled ? 'scrolled' : ''} ${light ? 'nav-light' : ''}`} aria-label="Navigasi utama" initial={{ y: -80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 24 }}>
         <Brand />
         <div className="nav-links">
           {LINKS.map((l) => (
@@ -40,15 +41,15 @@ export function PublicNavbar() {
           <ThemeToggle />
           {!loading && user && (
             <>
-              <Link to="/dashboard" className="btn btn-light btn-sm hide-md"><LayoutDashboard size={15} /> Dashboard</Link>
-              <NotifBell onDark />
-              <UserMenu onDark />
+              <Link to="/dashboard" className={`btn ${light ? 'btn-primary' : 'btn-light'} btn-sm hide-md`}><LayoutDashboard size={15} /> Dashboard</Link>
+              <NotifBell onDark={!light} />
+              <UserMenu onDark={!light} />
             </>
           )}
           {!loading && !user && (
             <>
-              <Link to="/login" className="btn btn-ghost btn-sm hide-sm" style={{ color: '#fff' }}>Masuk</Link>
-              <Link to="/register" className="btn btn-light btn-sm"><span className="btn-label">Daftar</span><span className="sr-only">Daftar</span></Link>
+              <Link to="/login" className="btn btn-ghost btn-sm hide-sm" style={{ color: light ? 'var(--c-ink-strong)' : '#fff' }}>Masuk</Link>
+              <Link to="/register" className={`btn ${light ? 'btn-primary' : 'btn-light'} btn-sm`}><span className="btn-label">Daftar</span><span className="sr-only">Daftar</span></Link>
             </>
           )}
           <button className="icon-btn burger" onClick={() => setOpen((o) => !o)} aria-label={open ? 'Tutup menu' : 'Buka menu'} aria-expanded={open}>

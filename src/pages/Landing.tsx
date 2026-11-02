@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, Gift, HandHeart, HeartHandshake, Search, ShieldCheck, Sparkles, Users } from 'lucide-react'
+import { ArrowRight, Gift, HandHeart, HeartHandshake, Layers, Search, ShieldCheck, SlidersHorizontal, Sparkles, Users, Zap } from 'lucide-react'
 import { listPengajuanPublik, listPenawaran } from '../lib/api'
 import { useData, useTitle } from '../lib/hooks'
 import { useAuth } from '../lib/auth'
 import { KATEGORI } from '../lib/constants'
 import type { Penawaran, Pengajuan } from '../lib/firebase'
-import HeroArt from '../components/HeroArt'
 import { NeedCard, OfferCard } from '../components/Cards'
 import { AnimatedNumber, CardSkeletons, EmptyState, Reveal, stagger } from '../components/ui'
 
-const CHIP_STYLES = ['dark', 'peach', '', 'dark', 'peach', '', 'dark', '', 'peach', '', 'dark']
+const FITUR = [
+  { icon: ShieldCheck, t: 'Terverifikasi', d: 'Setiap pengajuan diperiksa verifikator sebelum tampil.' },
+  { icon: Layers, t: 'Terlacak', d: 'Status jelas dari pengajuan hingga bantuan selesai.' },
+  { icon: Zap, t: 'Tepat sasaran', d: 'Dicocokkan berdasarkan jenis bantuan dan tingkat urgensi.' },
+  { icon: HeartHandshake, t: 'Untuk semua', d: 'Mahasiswa, dosen, dan staf lintas fakultas UNMUL.' },
+]
 
 export default function Landing() {
   useTitle('Berbagi Bantuan di Universitas Mulawarman')
@@ -35,151 +39,104 @@ export default function Landing() {
   const [kat, setKat] = useState('Semua')
   const tampil = (kat === 'Semua' ? terbuka : terbuka.filter((r) => r.kategori === kat)).slice(0, 3)
 
-  const [quiz, setQuiz] = useState({ peran: 'bantu', kategori: '', urgensi: '', q: '' })
+  const [cari, setCari] = useState({ peran: 'bantu', kategori: '', urgensi: '' })
 
   useEffect(() => {
     if (hash) setTimeout(() => document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth' }), 120)
   }, [hash])
 
-  function jalankanQuiz() {
+  function jalankanCari() {
     const p = new URLSearchParams()
-    if (quiz.kategori) p.set('kategori', quiz.kategori)
-    if (quiz.urgensi && quiz.peran === 'bantu') p.set('urgensi', quiz.urgensi)
-    if (quiz.q.trim()) p.set('q', quiz.q.trim())
-    nav(`${quiz.peran === 'bantu' ? '/bantuan' : '/penawaran'}${p.toString() ? `?${p}` : ''}`)
+    if (cari.kategori) p.set('kategori', cari.kategori)
+    if (cari.urgensi && cari.peran === 'bantu') p.set('urgensi', cari.urgensi)
+    nav(`${cari.peran === 'bantu' ? '/bantuan' : '/penawaran'}${p.toString() ? `?${p}` : ''}`)
   }
 
-  const chips = [...KATEGORI.map((k) => ({ label: k === 'Lainnya' ? 'Bantuan lainnya' : k, to: `/bantuan?kategori=${encodeURIComponent(k)}` })), { label: 'Verifikasi pengajuan', to: '/#cara-kerja' }, { label: 'Pelacakan status', to: '/#cara-kerja' }, { label: 'Mahasiswa, dosen & staf', to: '/register' }, { label: 'Pencocokan kebutuhan', to: '/bantuan' }, { label: 'Riwayat tercatat', to: '/#cara-kerja' }, { label: 'Gratis', to: '/register' }]
-
   return (
-    <>
+    <div className="hm">
       {/* HERO */}
-      <section className="hero" id="home">
-        <HeroArt />
-        <div className="hero-inner">
-          <motion.h1 className="hero-word" initial={{ opacity: 0, y: 40, filter: 'blur(10px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}>
-            unmul peduli
+      <section className="hm-hero">
+        <img className="hm-hero-img" src="/campus-hero.jpg" alt="Gerbang Universitas Mulawarman, Samarinda" fetchPriority="high" />
+        <div className="container hm-hero-inner">
+          <motion.span className="hm-eyebrow" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            Platform bantuan Universitas Mulawarman
+          </motion.span>
+          <motion.h1 className="hm-title" initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
+            Satu kampus,
+            <em>satu kepedulian.</em>
           </motion.h1>
-          <motion.p className="hero-sub" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.7 }}>
-            Platform bantuan yang mempertemukan yang membutuhkan dan yang ingin membantu, di lingkungan Universitas Mulawarman. Terorganisasi, transparan, tepat sasaran.
+          <motion.p className="hm-lead" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.6 }}>
+            Ajukan kebutuhan atau tawarkan bantuan. Terorganisasi, transparan, dan tepat sasaran untuk seluruh sivitas akademika.
           </motion.p>
-          <motion.div className="row row-wrap" style={{ justifyContent: 'center' }} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.7 }}>
-            <button className="btn btn-primary btn-lg" style={{ background: 'var(--c-deep)', color: '#fff' }} onClick={() => nav(user ? '/ajukan' : '/register')}>
-              {user ? 'Ajukan bantuan' : 'Mulai berbagi sekarang'} <ArrowRight size={17} />
+          <motion.div className="row row-wrap" style={{ marginTop: 26 }} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38, duration: 0.6 }}>
+            <button className="btn btn-primary btn-lg" onClick={() => nav(user ? '/ajukan' : '/register')}>
+              {user ? 'Ajukan bantuan' : 'Mulai berbagi'} <ArrowRight size={17} />
             </button>
-            <Link to="/bantuan" className="btn btn-lg btn-light" style={{ boxShadow: 'var(--shadow-sm)' }}>Lihat daftar bantuan</Link>
+            <Link to="/bantuan" className="btn btn-lg btn-outline" style={{ background: 'color-mix(in srgb, var(--c-surface) 70%, transparent)' }}>Lihat bantuan</Link>
           </motion.div>
         </div>
-        <motion.div className="hero-title" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55, duration: 0.9 }}>
-          Satu <span className="hl">kampus.</span>
-          <br />
-          Satu <span className="hl2">kepedulian.</span>
-        </motion.div>
       </section>
 
-      <div className="band-dark">
-        <div className="container" style={{ paddingBottom: 90 }}>
-          {/* SHEET */}
-          <Reveal className="sheet">
-            <div>
-              <h2>Bantuan untuk setiap kebutuhan sivitas akademika</h2>
-              <div className="chips">
-                {chips.map((c, i) => (
-                  <Link key={c.label} to={c.to} className={`chip ${CHIP_STYLES[i % CHIP_STYLES.length]}`}>{c.label}</Link>
-                ))}
-              </div>
-            </div>
-            <div className="sheet-aside">
-              <div>
-                <h3>UNMUL Peduli lebih dari sekadar grup chat</h3>
-                <p style={{ marginTop: 12 }}>Tidak ada lagi info bantuan yang tenggelam di grup WhatsApp. Semua pengajuan <b>diverifikasi</b>, <b>dicocokkan</b>, dan <b>dilacak</b> sampai selesai.</p>
-              </div>
-              <p><b>Siapa pun</b> di UNMUL bisa mengajukan maupun menawarkan bantuan.</p>
-            </div>
-          </Reveal>
-
-          {/* CARA KERJA */}
-          <div id="cara-kerja" style={{ paddingTop: 96 }}>
-            <div className="how-grid">
-              <Reveal className="how-intro">
-                <span className="badge badge-dark" style={{ background: 'rgba(255,255,255,.12)' }}><Sparkles size={13} /> Cara kerja</span>
-                <h2 style={{ fontSize: 'clamp(30px,3.6vw,44px)', fontWeight: 600, marginTop: 14 }}>Tiga langkah sederhana</h2>
-                <p>Alur dirancang singkat supaya bantuan cepat sampai. Setiap langkah tercatat dan dapat dipantau kedua belah pihak.</p>
-              </Reveal>
-              {[
-                { c: 'c1', no: '01', icon: HandHeart, t: 'Ajukan kebutuhan', d: 'Ceritakan kebutuhanmu: jenis, jumlah, kondisi, urgensi, dan batas waktu. Verifikator memeriksa kelengkapan datanya.', to: user ? '/ajukan' : '/register', cta: 'Ajukan bantuan' },
-                { c: 'c2', no: '02', icon: Gift, t: 'Tawarkan bantuan', d: 'Punya buku, makanan, pakaian, atau dana lebih? Tawarkan, atau langsung pilih pengajuan yang ingin kamu bantu.', to: user ? '/tawarkan' : '/register', cta: 'Tawarkan bantuan' },
-                { c: 'c3', no: '03', icon: ShieldCheck, t: 'Pantau sampai selesai', d: 'Status berjalan dari Pengajuan, Verifikasi, Pencocokan, Penyaluran, hingga Selesai, lengkap dengan riwayat dan notifikasi.', to: '/bantuan', cta: 'Lihat daftar bantuan' },
-              ].map((s, i) => (
-                <Reveal key={s.c} delay={0.1 * (i + 1)} className={`how-card ${s.c}`}>
-                  <s.icon size={190} className="ill" strokeWidth={1} />
-                  <div style={{ position: 'relative' }}>
-                    <span className="no">{s.no}</span>
-                    <h3>{s.t}</h3>
-                    <p>{s.d}</p>
-                  </div>
-                  <Link to={s.to} className="btn btn-light" style={{ position: 'relative', justifySelf: 'start' }}>{s.cta} <ArrowRight size={15} /></Link>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-
-          {/* QUIZ */}
-          <Reveal className="quiz" id="temukan">
-            <h3>Bantuan apa yang cocok untukmu?</h3>
-            <div className="quiz-grid">
-              <div className="field"><label htmlFor="q-peran">Saya ingin</label>
-                <select id="q-peran" className="select" value={quiz.peran} onChange={(e) => setQuiz({ ...quiz, peran: e.target.value })}>
-                  <option value="bantu">Membantu orang lain</option>
-                  <option value="butuh">Mencari bantuan</option>
-                </select>
-              </div>
-              <div className="field"><label htmlFor="q-kat">Jenis bantuan</label>
-                <select id="q-kat" className="select" value={quiz.kategori} onChange={(e) => setQuiz({ ...quiz, kategori: e.target.value })}>
-                  <option value="">Semua jenis</option>
-                  {KATEGORI.map((k) => <option key={k}>{k}</option>)}
-                </select>
-              </div>
-              <div className="field"><label htmlFor="q-urg">Tingkat urgensi</label>
-                <select id="q-urg" className="select" value={quiz.urgensi} disabled={quiz.peran !== 'bantu'} onChange={(e) => setQuiz({ ...quiz, urgensi: e.target.value })}>
-                  <option value="">Semua tingkat</option>
-                  <option value="tinggi">Mendesak</option>
-                  <option value="sedang">Sedang</option>
-                  <option value="rendah">Rendah</option>
-                </select>
-              </div>
-              <div className="field"><label htmlFor="q-kata">Kata kunci</label>
-                <input id="q-kata" className="input" style={{ background: 'var(--c-surface)', border: 0 }} placeholder="Contoh: buku, beras" value={quiz.q} onChange={(e) => setQuiz({ ...quiz, q: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && jalankanQuiz()} />
-              </div>
-            </div>
-            <button className="btn btn-primary btn-lg" style={{ background: 'var(--c-deep)', color: '#fff' }} onClick={jalankanQuiz}><Search size={17} /> Tampilkan bantuan yang cocok</button>
-          </Reveal>
-        </div>
+      {/* PENCARIAN */}
+      <div className="container">
+        <motion.div className="hm-search" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.6 }} role="search">
+          <label className="f">
+            <HandHeart size={20} />
+            <span><small>Saya ingin</small>
+              <select value={cari.peran} onChange={(e) => setCari({ ...cari, peran: e.target.value })} aria-label="Saya ingin">
+                <option value="bantu">Membantu</option>
+                <option value="butuh">Mencari bantuan</option>
+              </select>
+            </span>
+          </label>
+          <label className="f">
+            <Layers size={20} />
+            <span><small>Jenis bantuan</small>
+              <select value={cari.kategori} onChange={(e) => setCari({ ...cari, kategori: e.target.value })} aria-label="Jenis bantuan">
+                <option value="">Semua jenis</option>
+                {KATEGORI.map((k) => <option key={k}>{k}</option>)}
+              </select>
+            </span>
+          </label>
+          <label className="f">
+            <SlidersHorizontal size={20} />
+            <span><small>Urgensi</small>
+              <select value={cari.urgensi} disabled={cari.peran !== 'bantu'} onChange={(e) => setCari({ ...cari, urgensi: e.target.value })} aria-label="Urgensi">
+                <option value="">Semua</option>
+                <option value="tinggi">Mendesak</option>
+                <option value="sedang">Sedang</option>
+                <option value="rendah">Rendah</option>
+              </select>
+            </span>
+          </label>
+          <button className="btn btn-primary btn-lg" onClick={jalankanCari}><Search size={17} /> Cari</button>
+        </motion.div>
       </div>
 
-      {/* DATA TERBARU */}
-      <section className="section band-light">
+      {/* KEUNGGULAN */}
+      <section className="hm-section" style={{ paddingTop: 72 }}>
         <div className="container">
-          <Reveal>
-            <div className="stats" style={{ marginBottom: 72 }}>
-              {[
-                { n: terbuka.length, l: 'Pengajuan menunggu dibantu', icon: HandHeart },
-                { n: selesai.length, l: 'Bantuan berhasil tersalurkan', icon: HeartHandshake },
-                { n: tersedia.length, l: 'Penawaran tersedia', icon: Gift },
-                { n: data.req.length + data.off.length, l: 'Total aktivitas bantuan', icon: Users },
-              ].map((s) => (
-                <div className="stat-big" key={s.l}>
-                  <s.icon size={22} style={{ color: 'var(--c-primary)', marginBottom: 12 }} />
-                  <b><AnimatedNumber value={s.n} /></b>
-                  <span>{s.l}</span>
-                </div>
-              ))}
-            </div>
-          </Reveal>
+          <div className="hm-features">
+            {FITUR.map((f, i) => (
+              <Reveal key={f.t} delay={i * 0.08} className="hm-feature">
+                <span className="ic"><f.icon size={26} /></span>
+                <b>{f.t}</b>
+                <p>{f.d}</p>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          <div className="sec-head">
-            <Reveal><h2>Pengajuan yang butuh uluran tanganmu</h2></Reveal>
-            <Link to="/bantuan" className="btn btn-outline">Lihat semua <ArrowRight size={15} /></Link>
+      {/* PENGAJUAN */}
+      <section className="hm-section hm-alt">
+        <div className="container">
+          <div className="hm-head">
+            <Reveal>
+              <span className="hm-eyebrow">Butuh uluran tangan</span>
+              <h2>Pengajuan yang menunggu dibantu</h2>
+            </Reveal>
+            <Link to="/bantuan" className="hm-link">Lihat semua <ArrowRight size={16} /></Link>
           </div>
           <div className="filter-row" style={{ marginTop: 0 }}>
             {['Semua', ...KATEGORI].map((c) => (
@@ -193,10 +150,45 @@ export default function Landing() {
               {tampil.map((p) => <NeedCard key={p.id} p={p} />)}
             </motion.div>
           )}
+        </div>
+      </section>
 
-          <div className="sec-head" style={{ marginTop: 80 }}>
-            <Reveal><h2>Penawaran bantuan terbaru</h2></Reveal>
-            <Link to="/penawaran" className="btn btn-outline">Lihat semua <ArrowRight size={15} /></Link>
+      {/* TENTANG */}
+      <section className="hm-section">
+        <div className="container hm-story">
+          <Reveal className="hm-story-img">
+            <img src="/campus-story.jpg" alt="Tugu dan gerbang kampus Universitas Mulawarman" loading="lazy" />
+            <div className="hm-note"><Sparkles size={16} /> Berbagi itu mudah, bila terorganisasi.</div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <span className="hm-eyebrow">Mengapa UNMUL Peduli</span>
+            <h2 className="hm-h2">Lebih dari sekadar grup chat.<br />Kami membangun kepedulian.</h2>
+            <p className="muted" style={{ fontSize: 15, maxWidth: 480 }}>
+              Informasi bantuan tidak lagi tenggelam di grup WhatsApp. Pengajuan diverifikasi, dicocokkan, dan dilacak sampai selesai, sehingga bantuan sampai ke yang benar-benar membutuhkan.
+            </p>
+            <div className="hm-stats">
+              {[
+                { n: terbuka.length, l: 'Menunggu dibantu' },
+                { n: selesai.length, l: 'Bantuan tersalurkan' },
+                { n: tersedia.length, l: 'Penawaran tersedia' },
+                { n: data.req.length + data.off.length, l: 'Total aktivitas' },
+              ].map((s) => (
+                <div key={s.l}><b><AnimatedNumber value={s.n} /></b><span>{s.l}</span></div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* PENAWARAN */}
+      <section className="hm-section hm-alt">
+        <div className="container">
+          <div className="hm-head">
+            <Reveal>
+              <span className="hm-eyebrow">Siap diklaim</span>
+              <h2>Penawaran bantuan terbaru</h2>
+            </Reveal>
+            <Link to="/penawaran" className="hm-link">Lihat semua <ArrowRight size={16} /></Link>
           </div>
           {loading ? <CardSkeletons n={3} /> : tersedia.length === 0 ? (
             <EmptyState icon={Gift} title="Belum ada penawaran tersedia" desc="Punya sesuatu yang bisa dibagi? Tawarkan sekarang." action={<Link to="/tawarkan" className="btn btn-primary">Tawarkan bantuan</Link>} />
@@ -205,18 +197,48 @@ export default function Landing() {
               {tersedia.slice(0, 3).map((p) => <OfferCard key={p.id} p={p} />)}
             </motion.div>
           )}
-
-          <Reveal style={{ marginTop: 90 }}>
-            <div className="sheet-aside" style={{ padding: '44px 40px', borderRadius: 32, gridTemplateColumns: '1fr auto', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ fontSize: 'clamp(24px,3vw,34px)' }}>Siap berbagi kepedulian?</h3>
-                <p style={{ marginTop: 10, maxWidth: 520 }}>Buat akun dengan email kampusmu dalam satu menit, lalu ajukan atau tawarkan bantuan.</p>
-              </div>
-              <Link to={user ? '/dashboard' : '/register'} className="btn btn-light btn-lg">{user ? 'Buka dashboard' : 'Daftar gratis'} <ArrowRight size={17} /></Link>
-            </div>
-          </Reveal>
         </div>
       </section>
-    </>
+
+      {/* CARA KERJA */}
+      <section className="hm-section" id="cara-kerja">
+        <div className="container">
+          <div className="hm-head" style={{ justifyContent: 'center', textAlign: 'center' }}>
+            <Reveal>
+              <span className="hm-eyebrow">Cara kerja</span>
+              <h2>Tiga langkah sederhana</h2>
+            </Reveal>
+          </div>
+          <div className="hm-steps">
+            {[
+              { icon: HandHeart, t: 'Ajukan kebutuhan', d: 'Ceritakan jenis, jumlah, kondisi, dan urgensi. Verifikator memeriksa kelengkapan datamu.', to: user ? '/ajukan' : '/register', cta: 'Ajukan bantuan' },
+              { icon: Gift, t: 'Tawarkan atau bantu', d: 'Tawarkan yang kamu punya, atau pilih pengajuan yang ingin kamu bantu langsung.', to: user ? '/tawarkan' : '/register', cta: 'Tawarkan bantuan' },
+              { icon: Users, t: 'Pantau sampai selesai', d: 'Pengajuan, verifikasi, pencocokan, penyaluran, selesai. Semua tercatat dan ada notifikasi.', to: '/bantuan', cta: 'Lihat daftar' },
+            ].map((s, i) => (
+              <Reveal key={s.t} delay={i * 0.1} className="hm-step">
+                <span className="no">0{i + 1}</span>
+                <span className="ic"><s.icon size={24} /></span>
+                <h3>{s.t}</h3>
+                <p>{s.d}</p>
+                <Link to={s.to} className="hm-link">{s.cta} <ArrowRight size={15} /></Link>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="container" style={{ paddingBottom: 72 }}>
+        <Reveal className="hm-cta">
+          <img src="/campus-hero.jpg" alt="" aria-hidden="true" loading="lazy" />
+          <div className="body">
+            <span className="hm-eyebrow" style={{ color: '#bcd3de' }}>Siap berbagi kepedulian?</span>
+            <h2>Mari wujudkan bersama</h2>
+            <p>Buat akun dalam satu menit, lalu ajukan atau tawarkan bantuan di lingkungan kampus.</p>
+            <Link to={user ? '/dashboard' : '/register'} className="btn btn-peach btn-lg">{user ? 'Buka dashboard' : 'Mulai sekarang'} <ArrowRight size={17} /></Link>
+          </div>
+        </Reveal>
+      </section>
+    </div>
   )
 }

@@ -23,11 +23,12 @@ export function Brand({ to = '/', sub = true }: { to?: string; sub?: boolean }) 
 
 export function ThemeToggle() {
   const { theme, toggle } = useTheme()
+  const dark = theme === 'dark'
   return (
-    <button className="theme-toggle" onClick={toggle} aria-label={theme === 'dark' ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'} role="switch" aria-checked={theme === 'dark'}>
-      <Sun size={14} className="bg-ic" style={{ right: 9 }} />
-      <Moon size={14} className="bg-ic" style={{ left: 9 }} />
-      <span className="knob">{theme === 'dark' ? <Moon size={15} /> : <Sun size={15} />}</span>
+    <button className="theme-toggle" onClick={toggle} aria-label={dark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'} role="switch" aria-checked={dark} title={dark ? 'Mode gelap' : 'Mode terang'}>
+      <span className="tt-knob" aria-hidden="true" />
+      <span className="tt-ic sun" aria-hidden="true"><Sun size={15} /></span>
+      <span className="tt-ic moon" aria-hidden="true"><Moon size={15} /></span>
     </button>
   )
 }
